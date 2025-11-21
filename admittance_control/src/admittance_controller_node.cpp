@@ -8,6 +8,7 @@ int main(int argc, char** argv) {
 
   // Constructing the controller
   AdmittanceController admittance_controller(frequency);
+  admittance_controller.setup_moveit_servo();
 
   // Running the controller
   admittance_controller.run();

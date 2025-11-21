@@ -8,10 +8,12 @@
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
+#include <moveit_servo/servo.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <std_msgs/msg/float32.hpp>
+#include <std_msgs/msg/float64_multi_array.hpp>
 #include <tf2_ros/buffer.hpp>
 #include <tf2_ros/transform_listener.hpp>
 
@@ -106,7 +108,8 @@ class AdmittanceController : public rclcpp::Node {
   // Publisher for the twist of the platform
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_platform_cmd_;
   // Publisher for the twist of arm endeffector
-  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_arm_cmd_;
+  // rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_arm_cmd_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr pub_arm_cmd_;
   // Publisher for the pose of arm endeffector in the world frame
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pub_ee_pose_world_;
   // Publisher for the twist of arm endeffector in the world frame
@@ -117,6 +120,10 @@ class AdmittanceController : public rclcpp::Node {
   rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>::SharedPtr pub_wrench_control_;
   // Publisher to visualize the real equilibrium used by admittance.
   rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr pub_equilibrium_real_;
+
+  // MoveIt Servo (cartesian -> configuration space)
+  std::shared_ptr<planning_scene_monitor::PlanningSceneMonitor> planning_scene_monitor_;
+  std::shared_ptr<moveit_servo::Servo> servo_;
 
   // INPUT SIGNAL
   // external wrench (force/torque sensor) in "robotiq_force_torque_frame_id" frame
@@ -199,6 +206,12 @@ class AdmittanceController : public rclcpp::Node {
   // Initialization
   void wait_for_transformations();
 
+public:
+  // moveit_servo setup requires calls to this->shared_from_this, which are not
+  // available in the constructor.
+  void setup_moveit_servo();
+
+protected:
   // Control
   void compute_admittance();
 

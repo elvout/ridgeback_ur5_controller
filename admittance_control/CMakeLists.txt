@@ -12,12 +12,11 @@ endif()
 find_package(Eigen3 REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(rclcpp_action REQUIRED)
-find_package(rclcpp_lifecycle REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(moveit_servo REQUIRED)
 
 find_package(cartesian_state_msgs REQUIRED)
 
@@ -34,6 +33,7 @@ ament_target_dependencies(admittance_controller_node
   nav_msgs
   sensor_msgs
   tf2_ros
+  moveit_servo
   cartesian_state_msgs
 )
 target_link_libraries(admittance_controller_node Eigen3::Eigen)

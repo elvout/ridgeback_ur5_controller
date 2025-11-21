@@ -3,8 +3,7 @@
 using std::placeholders::_1;
 
 AdmittanceController::AdmittanceController(double frequency)
-    : Node("admittance_controller"),
-      loop_rate_(frequency) {
+    : Node("admittance_controller"), loop_rate_(frequency) {
   // Parameters
   const std::string topic_platform_command =
       this->declare_parameter<std::string>("topic_platform_command");
@@ -37,7 +36,8 @@ AdmittanceController::AdmittanceController(double frequency)
   const std::vector<double> D_p = this->declare_parameter<std::vector<double>>("damping_platform");
   const std::vector<double> D_a = this->declare_parameter<std::vector<double>>("damping_arm");
   const std::vector<double> K = this->declare_parameter<std::vector<double>>("stiffness_coupling");
-  const std::vector<double> d_e = this->declare_parameter<std::vector<double>>("equilibrium_point_spring");
+  const std::vector<double> d_e =
+      this->declare_parameter<std::vector<double>>("equilibrium_point_spring");
   const std::vector<double> workspace_limits =
       this->declare_parameter<std::vector<double>>("workspace_limits");
   arm_max_vel_ = this->declare_parameter<double>("arm_max_vel");
@@ -58,15 +58,17 @@ AdmittanceController::AdmittanceController(double frequency)
   sub_wrench_control_ = this->create_subscription<geometry_msgs::msg::WrenchStamped>(
       topic_control_wrench, 5, std::bind(&AdmittanceController::wrench_control_callback, this, _1));
   sub_equilibrium_desired_ = this->create_subscription<geometry_msgs::msg::Point>(
-      topic_equilibrium_desired, 10, std::bind(&AdmittanceController::equilibrium_callback, this, _1));
+      topic_equilibrium_desired, 10,
+      std::bind(&AdmittanceController::equilibrium_callback, this, _1));
   sub_ds_velocity_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
       topic_ds_velocity, 10, std::bind(&AdmittanceController::ds_velocity_callback, this, _1));
   sub_admittance_ratio_ = this->create_subscription<std_msgs::msg::Float32>(
-      topic_admittance_ratio, 10, std::bind(&AdmittanceController::admittance_ratio_callback, this, _1));
+      topic_admittance_ratio, 10,
+      std::bind(&AdmittanceController::admittance_ratio_callback, this, _1));
 
   // Publishers
   pub_platform_cmd_ = this->create_publisher<geometry_msgs::msg::Twist>(topic_platform_command, 5);
-  pub_arm_cmd_ = this->create_publisher<geometry_msgs::msg::Twist>(topic_arm_command, 5);
+  pub_arm_cmd_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(topic_arm_command, 5);
 
   pub_ee_pose_world_ =
       this->create_publisher<geometry_msgs::msg::PoseStamped>(topic_arm_pose_world, 5);
@@ -416,18 +418,14 @@ void AdmittanceController::send_commands_to_robot() {
   pub_platform_cmd_->publish(platform_twist_cmd);
 
   // for the arm
-  geometry_msgs::msg::Twist arm_twist_cmd;
+  const moveit::core::RobotStatePtr robot_state =
+      planning_scene_monitor_->getStateMonitor()->getCurrentState();
+  const moveit_servo::TwistCommand command{"vg10_grasp_center", arm_desired_twist_final_};
+  const moveit_servo::KinematicState next_state = servo_->getNextJointState(robot_state, command);
 
-  arm_twist_cmd.linear.x = arm_desired_twist_final_(0);
-  arm_twist_cmd.linear.y = arm_desired_twist_final_(1);
-  arm_twist_cmd.linear.z = arm_desired_twist_final_(2);
-  arm_twist_cmd.angular.x = arm_desired_twist_final_(3);
-  arm_twist_cmd.angular.y = arm_desired_twist_final_(4);
-  arm_twist_cmd.angular.z = arm_desired_twist_final_(5);
-
-  // ROS_WARN_STREAM_THROTTLE(1,"sending z vel: " << arm_twist_cmd.linear.z);
-
-  pub_arm_cmd_->publish(arm_twist_cmd);
+  std_msgs::msg::Float64MultiArray arm_vel_cmd =
+      moveit_servo::composeMultiArrayMessage(servo_->getParams(), next_state);
+  pub_arm_cmd_->publish(arm_vel_cmd);
 }
 
 void AdmittanceController::limit_to_workspace() {
@@ -538,6 +536,22 @@ void AdmittanceController::wait_for_transformations() {
 
   ft_arm_ready_ = true;
   RCLCPP_INFO(this->get_logger(), "The Force/Torque sensor is ready to use.");
+}
+
+void AdmittanceController::setup_moveit_servo() {
+  const std::string servo_param_namespace = "moveit_servo";
+  auto servo_param_listener =
+      std::make_shared<const servo::ParamListener>(this->shared_from_this(), servo_param_namespace);
+  const servo::Params servo_params = servo_param_listener->get_params();
+
+  planning_scene_monitor_ =
+      moveit_servo::createPlanningSceneMonitor(this->shared_from_this(), servo_params);
+  planning_scene_monitor_->startSceneMonitor();
+  planning_scene_monitor_->startStateMonitor();
+
+  servo_ = std::make_shared<moveit_servo::Servo>(this->shared_from_this(), servo_param_listener,
+                                                 planning_scene_monitor_);
+  servo_->setCommandType(moveit_servo::CommandType::TWIST);
 }
 
 ////////////

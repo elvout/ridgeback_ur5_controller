@@ -91,7 +91,7 @@ class AdmittanceController : public rclcpp::Node {
   // Subscriber for the platform state
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_platform_state_;
   // Subscriber for the arm state
-  rclcpp::Subscription<cartesian_state_msgs::msg::PoseTwist>::SharedPtr sub_arm_state_;
+  // rclcpp::Subscription<cartesian_state_msgs::msg::PoseTwist>::SharedPtr sub_arm_state_;
   // Subscriber for the ft sensor at the endeffector
   rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr sub_wrench_external_;
   // Subscriber for the ft sensor at the endeffector
@@ -217,7 +217,8 @@ protected:
 
   // Callbacks
   void state_platform_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
-  void state_arm_callback(const cartesian_state_msgs::msg::PoseTwist::SharedPtr msg);
+  // void state_arm_callback(const cartesian_state_msgs::msg::PoseTwist::SharedPtr msg);
+  bool update_arm_state();
   void wrench_callback(const geometry_msgs::msg::WrenchStamped::SharedPtr msg);
   void wrench_control_callback(const geometry_msgs::msg::WrenchStamped::SharedPtr msg);
 

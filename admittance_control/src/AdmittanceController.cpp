@@ -10,7 +10,7 @@ AdmittanceController::AdmittanceController(double frequency)
   const std::string topic_platform_state =
       this->declare_parameter<std::string>("topic_platform_state");
   const std::string topic_arm_command = this->declare_parameter<std::string>("topic_arm_command");
-  const std::string topic_arm_state = this->declare_parameter<std::string>("topic_arm_state");
+  // const std::string topic_arm_state = this->declare_parameter<std::string>("topic_arm_state");
   const std::string topic_arm_pose_world =
       this->declare_parameter<std::string>("topic_arm_pose_world");
   const std::string topic_arm_twist_world =
@@ -51,8 +51,8 @@ AdmittanceController::AdmittanceController(double frequency)
   // Subscribers
   sub_platform_state_ = this->create_subscription<nav_msgs::msg::Odometry>(
       topic_platform_state, 5, std::bind(&AdmittanceController::state_platform_callback, this, _1));
-  sub_arm_state_ = this->create_subscription<cartesian_state_msgs::msg::PoseTwist>(
-      topic_arm_state, 10, std::bind(&AdmittanceController::state_arm_callback, this, _1));
+  // sub_arm_state_ = this->create_subscription<cartesian_state_msgs::msg::PoseTwist>(
+  //     topic_arm_state, 10, std::bind(&AdmittanceController::state_arm_callback, this, _1));
   sub_wrench_external_ = this->create_subscription<geometry_msgs::msg::WrenchStamped>(
       topic_external_wrench, 5, std::bind(&AdmittanceController::wrench_callback, this, _1));
   sub_wrench_control_ = this->create_subscription<geometry_msgs::msg::WrenchStamped>(
@@ -203,6 +203,8 @@ void AdmittanceController::compute_admittance() {
 
   Vector6d error;
 
+  this->update_arm_state();
+
   // Orientation error w.r.t. desired equilibriums
   if (equilibrium_orientation_.coeffs().dot(arm_real_orientation_.coeffs()) < 0.0) {
     arm_real_orientation_.coeffs() << -arm_real_orientation_.coeffs();
@@ -271,15 +273,61 @@ void AdmittanceController::state_platform_callback(const nav_msgs::msg::Odometry
       msg->twist.twist.angular.z;
 }
 
+/*
 void AdmittanceController::state_arm_callback(
-    const cartesian_state_msgs::msg::PoseTwist::SharedPtr msg) {
-  arm_real_position_ << msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
+  const cartesian_state_msgs::msg::PoseTwist::SharedPtr msg) {
+    arm_real_position_ << msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
 
-  arm_real_orientation_.coeffs() << msg->pose.orientation.x, msg->pose.orientation.y,
-      msg->pose.orientation.z, msg->pose.orientation.w;
+    arm_real_orientation_.coeffs() << msg->pose.orientation.x, msg->pose.orientation.y,
+    msg->pose.orientation.z, msg->pose.orientation.w;
 
-  arm_real_twist_ << msg->twist.linear.x, msg->twist.linear.y, msg->twist.linear.z,
-      msg->twist.angular.x, msg->twist.angular.y, msg->twist.angular.z;
+    arm_real_twist_ << msg->twist.linear.x, msg->twist.linear.y, msg->twist.linear.z,
+    msg->twist.angular.x, msg->twist.angular.y, msg->twist.angular.z;
+  }
+*/
+
+bool AdmittanceController::update_arm_state() {
+  const moveit::core::RobotStatePtr robot_state =
+      planning_scene_monitor_->getStateMonitor()->getCurrentState();
+
+  const Eigen::Isometry3d& T_baselink_ur10ebaselink =
+      robot_state->getGlobalLinkTransform("ur10ebase_link");
+  const Eigen::Isometry3d& T_baselink_vg10graspcenter =
+      robot_state->getGlobalLinkTransform("vg10_grasp_center");
+  const Eigen::Isometry3d T_ur10ebaselink_vg10graspcenter =
+      T_baselink_ur10ebaselink.inverse() * T_baselink_vg10graspcenter;
+
+  platform_real_position_ = T_ur10ebaselink_vg10graspcenter.translation();
+  platform_real_orientation_ = Eigen::Quaterniond(T_ur10ebaselink_vg10graspcenter.rotation());
+
+  const moveit::core::JointModelGroup* joint_group =
+      robot_state->getJointModelGroup("ur_manipulator_with_vg10");
+  const moveit::core::LinkModel* ee_link =
+      robot_state->getRobotModel()->getLinkModel("vg10_grasp_center");
+
+  Eigen::VectorXd joint_velocities(joint_group->getVariableCount());
+  robot_state->copyJointGroupVelocities(joint_group, joint_velocities);
+
+  Eigen::MatrixXd jacobian;
+  const bool jacobian_valid =
+      robot_state->getJacobian(joint_group, ee_link, Eigen::Vector3d::Zero(), jacobian);
+
+  if (!jacobian_valid) {
+    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                          "update_arm_state: invalid jacobian");
+    arm_real_twist_.setZero();
+    return false;
+  }
+
+  const Eigen::VectorXd twist = jacobian * joint_velocities;
+  if (twist.size() != 6) {
+    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                          "update_arm_state: twist.size != 6");
+    return false;
+  }
+
+  arm_real_twist_ = twist;
+  return true;
 }
 
 void AdmittanceController::wrench_callback(const geometry_msgs::msg::WrenchStamped::SharedPtr msg) {

@@ -204,9 +204,8 @@ class AdmittanceController : public rclcpp::Node {
   bool world_arm_ready_;
 
   // Initialization
-  void wait_for_transformations();
-
 public:
+  void wait_for_transformations();
   // moveit_servo setup requires calls to this->shared_from_this, which are not
   // available in the constructor.
   void setup_moveit_servo();

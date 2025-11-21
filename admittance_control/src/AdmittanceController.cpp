@@ -88,10 +88,6 @@ AdmittanceController::AdmittanceController(double frequency)
   RCLCPP_INFO_STREAM(this->get_logger(),
                      "Platform max vel:" << platform_max_vel_ << " max acc:" << platform_max_acc_);
 
-  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
-  tf_listener_ =
-      std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this->shared_from_this());
-
   // initializing the class variables
   wrench_external_.setZero();
   wrench_control_.setZero();
@@ -127,13 +123,6 @@ AdmittanceController::AdmittanceController(double frequency)
   arm_real_position_.setZero();
   platform_real_position_.setZero();
 
-  while (rclcpp::ok() && arm_real_position_(0) == 0) {
-    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                         "Waiting for the state of the arm...");
-    rclcpp::spin_some(this->shared_from_this());
-    loop_rate_.sleep();
-  }
-
   // Init integrator
   arm_desired_twist_adm_.setZero();
   platform_desired_twist_.setZero();
@@ -162,8 +151,6 @@ AdmittanceController::AdmittanceController(double frequency)
   world_arm_ready_ = false;
 
   admittance_ratio_ = 1;
-
-  wait_for_transformations();
 }
 
 ///////////////////////////////////////////////////////////////
@@ -556,8 +543,18 @@ void AdmittanceController::limit_to_workspace() {
 /// INITIALIZATION ///
 //////////////////////
 void AdmittanceController::wait_for_transformations() {
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ =
+      std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this->shared_from_this());
+
   Matrix6d rot_matrix;
   rotation_base_.setZero();
+
+  while (!update_arm_state()) {
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                         "Waiting for the state of the arm...");
+    sleep(1);
+  }
 
   // Makes sure all TFs exists before enabling all transformations in the callbacks
   while (!get_rotation_matrix(rotation_base_, "base_link", "ur10ebase_link")) {

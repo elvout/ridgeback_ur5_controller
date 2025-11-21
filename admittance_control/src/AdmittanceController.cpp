@@ -308,7 +308,7 @@ void AdmittanceController::wrench_callback(const geometry_msgs::msg::WrenchStamp
     }
 
     // Get transform from arm base link to platform base link
-    get_rotation_matrix(rotation_ft_base, "ur5_arm_base_link", "robotiq_force_torque_frame_id");
+    get_rotation_matrix(rotation_ft_base, "ur10ebase_link", "ur10etool0");
 
     // Filter and update
     wrench_external_ << (1 - wrench_filter_factor_) * wrench_external_ +
@@ -318,13 +318,13 @@ void AdmittanceController::wrench_callback(const geometry_msgs::msg::WrenchStamp
 
 void AdmittanceController::wrench_control_callback(
     const geometry_msgs::msg::WrenchStamped::SharedPtr msg) {
-  if (msg->header.frame_id == "ur5_arm_base_link") {
+  if (msg->header.frame_id == "ur10ebase_link") {
     wrench_control_ << msg->wrench.force.x, msg->wrench.force.y, msg->wrench.force.z,
         msg->wrench.torque.x, msg->wrench.torque.y, msg->wrench.torque.z;
   } else {
     RCLCPP_WARN_THROTTLE(
         this->get_logger(), *this->get_clock(), 5000,
-        "wrench_control_callback: The frame_id is not specified as ur5_arm_base_link");
+        "wrench_control_callback: The frame_id is not specified as ur10ebase_link");
   }
 }
 
@@ -512,7 +512,7 @@ void AdmittanceController::wait_for_transformations() {
   rotation_base_.setZero();
 
   // Makes sure all TFs exists before enabling all transformations in the callbacks
-  while (!get_rotation_matrix(rotation_base_, "base_link", "ur5_arm_base_link")) {
+  while (!get_rotation_matrix(rotation_base_, "base_link", "ur10ebase_link")) {
     sleep(1);
   }
 
@@ -521,16 +521,16 @@ void AdmittanceController::wait_for_transformations() {
   }
   base_world_ready_ = true;
 
-  while (!get_rotation_matrix(rot_matrix, "world", "ur5_arm_base_link")) {
+  while (!get_rotation_matrix(rot_matrix, "world", "ur10ebase_link")) {
     sleep(1);
   }
   arm_world_ready_ = true;
-  while (!get_rotation_matrix(rot_matrix, "ur5_arm_base_link", "world")) {
+  while (!get_rotation_matrix(rot_matrix, "ur10ebase_link", "world")) {
     sleep(1);
   }
   world_arm_ready_ = true;
 
-  while (!get_rotation_matrix(rot_matrix, "ur5_arm_base_link", "FT300_link")) {
+  while (!get_rotation_matrix(rot_matrix, "ur10ebase_link", "ur10etool0")) {
     sleep(1);
   }
 
@@ -588,7 +588,7 @@ void AdmittanceController::publish_arm_state_in_world() {
   Matrix6d rotation_p_base_world;
 
   if (arm_world_ready_ && base_world_ready_) {
-    get_rotation_matrix(rotation_a_base_world, "world", "ur5_arm_base_link");
+    get_rotation_matrix(rotation_a_base_world, "world", "ur10ebase_link");
     get_rotation_matrix(rotation_p_base_world, "world", "base_link");
 
     ee_twist_world_ =
@@ -612,7 +612,7 @@ void AdmittanceController::publish_arm_state_in_world() {
     try {
       // listener.lookupTransform("ur5_arm_base_link", "robotiq_force_torque_frame_id",
       const geometry_msgs::msg::TransformStamped transform =
-          tf_buffer_->lookupTransform("world", "robotiq_force_torque_frame_id", tf2::TimePointZero);
+          tf_buffer_->lookupTransform("world", "ur10etool0", tf2::TimePointZero);
 
       ee_pose_world_(0) = transform.transform.translation.x;
       ee_pose_world_(1) = transform.transform.translation.y;
@@ -646,7 +646,7 @@ void AdmittanceController::publish_debuggings_signals() {
   geometry_msgs::msg::WrenchStamped msg_wrench;
 
   msg_wrench.header.stamp = this->get_clock()->now();
-  msg_wrench.header.frame_id = "ur5_arm_base_link";
+  msg_wrench.header.frame_id = "ur10ebase_link";
   msg_wrench.wrench.force.x = wrench_external_(0);
   msg_wrench.wrench.force.y = wrench_external_(1);
   msg_wrench.wrench.force.z = wrench_external_(2);
@@ -656,7 +656,7 @@ void AdmittanceController::publish_debuggings_signals() {
   pub_wrench_external_->publish(msg_wrench);
 
   msg_wrench.header.stamp = this->get_clock()->now();
-  msg_wrench.header.frame_id = "ur5_arm_base_link";
+  msg_wrench.header.frame_id = "ur10ebase_link";
   msg_wrench.wrench.force.x = wrench_control_(0);
   msg_wrench.wrench.force.y = wrench_control_(1);
   msg_wrench.wrench.force.z = wrench_control_(2);
@@ -668,7 +668,7 @@ void AdmittanceController::publish_debuggings_signals() {
   geometry_msgs::msg::PointStamped msg_point;
 
   msg_point.header.stamp = this->get_clock()->now();
-  msg_point.header.frame_id = "ur5_arm_base_link";
+  msg_point.header.frame_id = "ur10ebase_link";
   msg_point.point.x = equilibrium_position_(0);
   msg_point.point.y = equilibrium_position_(1);
   msg_point.point.z = equilibrium_position_(2);

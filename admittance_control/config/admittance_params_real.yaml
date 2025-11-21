@@ -54,8 +54,19 @@ stiffness_coupling: [0,0,0,0,0,0,
 
 
 # this equilibrium point is derived from setting all joints to -90 degree
-equilibrium_point_spring: [0.111,0.494,0.587,      0.707, 0.004, 0.707, 0.010]
+# equilibrium_point_spring: [0.111,0.494,0.587,      0.707, 0.004, 0.707, 0.010]
 
+equilibrium_point_spring: [-0.166, -0.682, 0.277,  0.710, 0.007, 0.005, 0.704]
+# ros2 run tf2_ros tf2_echo ur10ebase_link vg10_grasp_center
+# - Translation: [-0.166, -0.682, 0.277]
+# - Rotation: in Quaternion [0.710, 0.007, 0.005, 0.704]  ((( XYZW )))
+# - Rotation: in RPY (radian) [1.579, 0.002, 0.017]
+# - Rotation: in RPY (degree) [90.449, 0.105, 0.987]
+# - Matrix:
+#   1.000  0.002  0.017 -0.166
+#   0.017 -0.008 -1.000 -0.682
+#  -0.002  1.000 -0.008  0.277
+#   0.000  0.000  0.000  1.000
 
 
 # pose: 

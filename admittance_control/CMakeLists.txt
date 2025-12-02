@@ -39,6 +39,7 @@ ament_target_dependencies(admittance_controller_node
 target_link_libraries(admittance_controller_node Eigen3::Eigen)
 
 install(TARGETS admittance_controller_node DESTINATION lib/${PROJECT_NAME})
+install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 
 ament_package()

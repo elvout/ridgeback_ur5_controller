@@ -1,0 +1,111 @@
+admittance_control:
+  ros__parameters:
+
+    # Only used for debug/visualization
+    world_frame_id: "base_link"
+
+    # pub: geometry_msgs/msg/Twist
+    topic_platform_command: "/cmd_vel"
+    # sub: nav_msgs/msg/Odometry
+    topic_platform_state: "/odom"
+    # pub: std_msgs/msg/Float64MultiArray (configuration space velocity control)
+    topic_arm_command: "/forward_velocity_controller/commands"
+
+    # pub
+    topic_arm_pose_world: "~/ee_pose_world"
+    # pub
+    topic_arm_twist_world: "~/ee_twist_world"
+    # pub
+    topic_external_wrench_arm_frame: "~/transformed/external_wrench"
+    # pub
+    topic_control_wrench_arm_frame: "~/transformed/control_wrench"
+    # sub: geometry_msgs/msg/WrenchStamped
+    topic_external_wrench: "/force_torque_sensor_broadcaster/wrench"
+    # sub: geometry_msgs/msg/WrenchStamped
+    topic_control_wrench: "~/control_wrench"
+    # sub: std_msgs/msg/Float32
+    topic_admittance_ratio: "~/admittance_ratio"
+    # sub: geometry_msgs/msg/Point
+    topic_equilibrium_desired: "~/equilibrium_desired"
+    # pub
+    topic_equilibrium_real: "~/equilibrium_real"
+
+    # sub: geometry_msgs/msg/TwistStamped
+    topic_ds_velocity: "~/ds_desired_velocity"
+    # len 6; diagonal coefficients
+    mass_platform: [10.0, 10.0, 10.0, 5.0, 5.0, 5.0]
+    # len 6; diagonal coefficients
+    mass_arm: [6.0, 6.0, 6.0, 1.0, 1.0, 0.5]
+    # len 6; diagonal coefficients
+    damping_coupling: [20.0, 20.0, 0.0, 0.0, 0.0, 10.0]
+    # len 6; diagonal coefficients
+    damping_platform: [50.0, 50.0, 50.0, 0.0, 0.0, 10.0]
+    # len 6; diagonal coefficients
+    damping_arm: [60.0, 60.0, 60.0, 15.0, 15.0, 15.0]
+    # len 6; diagonal coefficients
+    stiffness_coupling: [0.0, 0.0, 0.0, 10.0, 10.0, 10.0]
+    # len 7 [x, y, z, qx, qy, qz, qw]
+    equilibrium_point_spring: [0.173, 0.640, 0.269, -0.001, 0.707, 0.707, -0.001]
+    # This is the UR10e in the home position, but facing towards the front of the base instead of the back.
+    #
+    # ~ ❯ ros2 run tf2_ros tf2_echo ur10ebase_link vg10_grasp_center                                                 neobotix@mmo-700-michigan 01:54:19 PM
+    # [INFO] [1764701792.048852116] [tf2_echo]: Waiting for transform ur10ebase_link ->  vg10_grasp_center: Invalid frame ID "ur10ebase_link" passed to canTransform argument target_frame - frame does not exist
+    # At time 1764701792.982722386
+    # - Translation: [0.173, 0.640, 0.269]
+    # - Rotation: in Quaternion (xyzw) [-0.001, 0.707, 0.707, -0.001]
+    # - Rotation: in RPY (radian) [1.571, -0.000, -3.139]
+    # - Rotation: in RPY (degree) [89.999, -0.005, -179.879]
+    # - Matrix:
+    #  -1.000  0.000 -0.002  0.173
+    #  -0.002 -0.000  1.000  0.640
+    #   0.000  1.000  0.000  0.269
+    #   0.000  0.000  0.000  1.000
+
+    # len 6 [x_min, x_max, y_min, y_max, z_min, z_max]
+    # End-effector position with repsect to the arm base link.
+    # Set z slightly higher to avoid hitting the base
+    workspace_limits: [-100.0, 100.0, -100.0, 0.10, 100.0]
+    arm_max_vel: 0.2
+    arm_max_acc: 1.0
+    platform_max_vel: 0.2
+    platform_max_acc: 0.2
+    wrench_filter_factor: 0.1
+    force_dead_zone_thres: 5.0
+    torque_dead_zone_thres: 0.5
+
+
+    moveit_servo:
+      ## Properties of outgoing commands
+      publish_period: 0.01  # 1/Nominal publish rate [seconds]
+      max_expected_latency: 0.1
+
+      ## MoveIt properties
+      move_group_name:  ur_manipulator_with_vg10  # Often 'manipulator' or 'arm'
+
+      ## Topic names and properties of commands
+      command_in_type: "speed_units" # "unitless"> in the range [-1:1], as if from joystick. "speed_units"> cmds are in m/s and rad/s
+      status_topic: ~/status # Publish status to this topic
+      command_out_topic: /forward_velocity_controller/commands # Publish outgoing commands here
+      # What type of topic does your robot driver expect?
+      # Currently supported are std_msgs/Float64MultiArray or trajectory_msgs/JointTrajectory
+      command_out_type: std_msgs/Float64MultiArray
+      # What to publish? Can save some bandwidth as most robots only require positions or velocities
+      publish_joint_positions: false
+      publish_joint_velocities: true
+      publish_joint_accelerations: false
+      joint_topic: /joint_states
+
+      ## Plugins for smoothing outgoing commands
+      use_smoothing: true
+      smoothing_filter_plugin_name: "online_signal_smoothing::ButterworthFilterPlugin"
+
+      ## Collision checking for the entire robot body
+      check_collisions: true
+      self_collision_proximity_threshold: 0.01 # Start decelerating when a self-collision is this far [m]
+      scene_collision_proximity_threshold: 0.02 # Start decelerating when a scene collision is this far [m]
+      collision_check_rate: 5.0 # [Hz] Collision-checking can easily bog down a CPU if done too often.
+      lower_singularity_threshold:  100.0  # Start decelerating when the condition number hits this (close to singularity)
+      hard_stop_singularity_threshold: 200.0 # Stop when the condition number hits this
+
+      ## Configure handling of singularities and joint limits
+      joint_limit_margins: [0.1] # added as a buffer to joint limits [radians]. If moving quickly, make this larger.

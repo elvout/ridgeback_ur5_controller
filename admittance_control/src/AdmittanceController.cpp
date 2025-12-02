@@ -284,8 +284,8 @@ bool AdmittanceController::update_arm_state() {
   const Eigen::Isometry3d T_ur10ebaselink_vg10graspcenter =
       T_baselink_ur10ebaselink.inverse() * T_baselink_vg10graspcenter;
 
-  platform_real_position_ = T_ur10ebaselink_vg10graspcenter.translation();
-  platform_real_orientation_ = Eigen::Quaterniond(T_ur10ebaselink_vg10graspcenter.rotation());
+  arm_real_position_ = T_ur10ebaselink_vg10graspcenter.translation();
+  arm_real_orientation_ = Eigen::Quaterniond(T_ur10ebaselink_vg10graspcenter.rotation());
 
   const moveit::core::JointModelGroup* joint_group =
       robot_state->getJointModelGroup("ur_manipulator_with_vg10");

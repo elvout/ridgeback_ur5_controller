@@ -5,6 +5,7 @@ using std::placeholders::_1;
 AdmittanceController::AdmittanceController(double frequency)
     : Node("admittance_controller"), loop_rate_(frequency) {
   // Parameters
+  world_frame_id_ = this->declare_parameter<std::string>("world_frame_id");
   const std::string topic_platform_command =
       this->declare_parameter<std::string>("topic_platform_command");
   const std::string topic_platform_state =
@@ -561,16 +562,16 @@ void AdmittanceController::wait_for_transformations() {
     sleep(1);
   }
 
-  while (!get_rotation_matrix(rot_matrix, "world", "base_link")) {
+  while (!get_rotation_matrix(rot_matrix, world_frame_id_, "base_link")) {
     sleep(1);
   }
   base_world_ready_ = true;
 
-  while (!get_rotation_matrix(rot_matrix, "world", "ur10ebase_link")) {
+  while (!get_rotation_matrix(rot_matrix, world_frame_id_, "ur10ebase_link")) {
     sleep(1);
   }
   arm_world_ready_ = true;
-  while (!get_rotation_matrix(rot_matrix, "ur10ebase_link", "world")) {
+  while (!get_rotation_matrix(rot_matrix, "ur10ebase_link", world_frame_id_)) {
     sleep(1);
   }
   world_arm_ready_ = true;
@@ -633,8 +634,8 @@ void AdmittanceController::publish_arm_state_in_world() {
   Matrix6d rotation_p_base_world;
 
   if (arm_world_ready_ && base_world_ready_) {
-    get_rotation_matrix(rotation_a_base_world, "world", "ur10ebase_link");
-    get_rotation_matrix(rotation_p_base_world, "world", "base_link");
+    get_rotation_matrix(rotation_a_base_world, world_frame_id_, "ur10ebase_link");
+    get_rotation_matrix(rotation_p_base_world, world_frame_id_, "base_link");
 
     ee_twist_world_ =
         rotation_a_base_world * arm_real_twist_ + rotation_p_base_world * platform_real_twist_;
@@ -643,7 +644,7 @@ void AdmittanceController::publish_arm_state_in_world() {
 
   geometry_msgs::msg::TwistStamped msg_twist;
   msg_twist.header.stamp = this->get_clock()->now();
-  msg_twist.header.frame_id = "world";
+  msg_twist.header.frame_id = world_frame_id_;
   msg_twist.twist.linear.x = ee_twist_world_(0);
   msg_twist.twist.linear.y = ee_twist_world_(1);
   msg_twist.twist.linear.z = ee_twist_world_(2);
@@ -657,7 +658,7 @@ void AdmittanceController::publish_arm_state_in_world() {
     try {
       // listener.lookupTransform("ur5_arm_base_link", "robotiq_force_torque_frame_id",
       const geometry_msgs::msg::TransformStamped transform =
-          tf_buffer_->lookupTransform("world", "ur10etool0", tf2::TimePointZero);
+          tf_buffer_->lookupTransform(world_frame_id_, "ur10etool0", tf2::TimePointZero);
 
       ee_pose_world_(0) = transform.transform.translation.x;
       ee_pose_world_(1) = transform.transform.translation.y;
@@ -676,7 +677,7 @@ void AdmittanceController::publish_arm_state_in_world() {
 
   geometry_msgs::msg::PoseStamped msg_pose;
   msg_pose.header.stamp = this->get_clock()->now();
-  msg_pose.header.frame_id = "world";
+  msg_pose.header.frame_id = world_frame_id_;
   msg_pose.pose.position.x = ee_pose_world_(0);
   msg_pose.pose.position.y = ee_pose_world_(1);
   msg_pose.pose.position.z = ee_pose_world_(2);

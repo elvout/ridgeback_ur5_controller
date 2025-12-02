@@ -184,6 +184,7 @@ class AdmittanceController : public rclcpp::Node {
   Vector6d arm_real_twist_;
 
   // End-effector state: pose and twist (in "world" frame)
+  std::string world_frame_id_;
   Vector7d ee_pose_world_;
   Vector6d ee_twist_world_;
 

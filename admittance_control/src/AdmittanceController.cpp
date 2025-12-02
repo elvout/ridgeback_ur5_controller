@@ -93,14 +93,14 @@ AdmittanceController::AdmittanceController(double frequency)
   wrench_external_.setZero();
   wrench_control_.setZero();
 
-  M_p_ = Eigen::Map<const Matrix6d>(M_p.data());
-  M_a_ = Eigen::Map<const Matrix6d>(M_a.data());
-  D_ = Eigen::Map<const Matrix6d>(D.data());
-  D_p_ = Eigen::Map<const Matrix6d>(D_p.data());
-  D_a_ = Eigen::Map<const Matrix6d>(D_a.data());
-  K_ = Eigen::Map<const Matrix6d>(K.data());
+  M_p_ = Vector6d(M_p.data()).asDiagonal();
+  M_a_ = Vector6d(M_a.data()).asDiagonal();
+  D_ = Vector6d(D.data()).asDiagonal();
+  D_p_ = Vector6d(D_p.data()).asDiagonal();
+  D_a_ = Vector6d(D_a.data()).asDiagonal();
+  K_ = Vector6d(K.data()).asDiagonal();
 
-  workspace_limits_ = Eigen::Map<const Vector6d>(workspace_limits.data());
+  workspace_limits_ = Vector6d(workspace_limits.data());
 
   ee_pose_world_.setZero();
   ee_twist_world_.setZero();

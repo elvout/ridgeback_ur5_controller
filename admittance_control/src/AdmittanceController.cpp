@@ -3,7 +3,7 @@
 using std::placeholders::_1;
 
 AdmittanceController::AdmittanceController(double frequency)
-    : Node("admittance_controller"), loop_rate_(frequency) {
+    : Node("admittance_control"), loop_rate_(frequency) {
   // Parameters
   world_frame_id_ = this->declare_parameter<std::string>("world_frame_id");
   const std::string topic_platform_command =

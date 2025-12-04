@@ -278,15 +278,10 @@ bool AdmittanceController::update_arm_state() {
   const moveit::core::RobotStatePtr robot_state =
       planning_scene_monitor_->getStateMonitor()->getCurrentState();
 
-  const Eigen::Isometry3d& T_baselink_ur10ebaselink =
-      robot_state->getGlobalLinkTransform("ur10ebase_link");
   const Eigen::Isometry3d& T_baselink_vg10graspcenter =
       robot_state->getGlobalLinkTransform("vg10_grasp_center");
-  const Eigen::Isometry3d T_ur10ebaselink_vg10graspcenter =
-      T_baselink_ur10ebaselink.inverse() * T_baselink_vg10graspcenter;
-
-  arm_real_position_ = T_ur10ebaselink_vg10graspcenter.translation();
-  arm_real_orientation_ = Eigen::Quaterniond(T_ur10ebaselink_vg10graspcenter.rotation());
+  arm_real_position_ = T_baselink_vg10graspcenter.translation();
+  arm_real_orientation_ = Eigen::Quaterniond(T_baselink_vg10graspcenter.rotation());
 
   const moveit::core::JointModelGroup* joint_group =
       robot_state->getJointModelGroup("ur_manipulator_with_vg10");
@@ -456,7 +451,7 @@ void AdmittanceController::send_commands_to_robot() {
   // for the arm
   const moveit::core::RobotStatePtr robot_state =
       planning_scene_monitor_->getStateMonitor()->getCurrentState();
-  const moveit_servo::TwistCommand command{"vg10_grasp_center", arm_desired_twist_final_};
+  const moveit_servo::TwistCommand command{"ur10ebase_link", arm_desired_twist_final_};
   const moveit_servo::KinematicState next_state = servo_->getNextJointState(robot_state, command);
 
   std_msgs::msg::Float64MultiArray arm_vel_cmd =
@@ -609,7 +604,7 @@ bool AdmittanceController::get_rotation_matrix(Matrix6d& rotation_matrix,
                                                std::string to_frame) {
   try {
     const geometry_msgs::msg::TransformStamped transform =
-        tf_buffer_->lookupTransform(to_frame, from_frame, tf2::TimePointZero);
+        tf_buffer_->lookupTransform(from_frame, to_frame, tf2::TimePointZero);
     const Eigen::Matrix3d rotation_from_to =
         Eigen::Quaterniond(transform.transform.rotation.w, transform.transform.rotation.x,
                            transform.transform.rotation.y, transform.transform.rotation.z)
@@ -658,7 +653,7 @@ void AdmittanceController::publish_arm_state_in_world() {
     try {
       // listener.lookupTransform("ur5_arm_base_link", "robotiq_force_torque_frame_id",
       const geometry_msgs::msg::TransformStamped transform =
-          tf_buffer_->lookupTransform(world_frame_id_, "ur10etool0", tf2::TimePointZero);
+          tf_buffer_->lookupTransform("ur10ebase_link", "ur10etool0", tf2::TimePointZero);
 
       ee_pose_world_(0) = transform.transform.translation.x;
       ee_pose_world_(1) = transform.transform.translation.y;

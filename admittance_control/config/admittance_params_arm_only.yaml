@@ -43,31 +43,29 @@ admittance_control:
     # len 6; diagonal coefficients
     damping_arm: [60.0, 60.0, 60.0, 15.0, 15.0, 15.0]
     # len 6; diagonal coefficients
-    stiffness_coupling: [0.0, 0.0, 0.0, 10.0, 10.0, 10.0]
+    stiffness_coupling: [10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
     # len 7 [x, y, z, qx, qy, qz, qw]
-    equilibrium_point_spring: [0.173, 0.640, 0.269, -0.001, 0.707, 0.707, -0.001]
-    # This is the UR10e in the home position, but facing towards the front of the base instead of the back.
-    #
-    # ~ ❯ ros2 run tf2_ros tf2_echo ur10ebase_link vg10_grasp_center                                                 neobotix@mmo-700-michigan 01:54:19 PM
-    # [INFO] [1764701792.048852116] [tf2_echo]: Waiting for transform ur10ebase_link ->  vg10_grasp_center: Invalid frame ID "ur10ebase_link" passed to canTransform argument target_frame - frame does not exist
-    # At time 1764701792.982722386
-    # - Translation: [0.173, 0.640, 0.269]
-    # - Rotation: in Quaternion (xyzw) [-0.001, 0.707, 0.707, -0.001]
-    # - Rotation: in RPY (radian) [1.571, -0.000, -3.139]
-    # - Rotation: in RPY (degree) [89.999, -0.005, -179.879]
-    # - Matrix:
-    #  -1.000  0.000 -0.002  0.173
-    #  -0.002 -0.000  1.000  0.640
-    #   0.000  1.000  0.000  0.269
-    #   0.000  0.000  0.000  1.000
+    equilibrium_point_spring: [0.945, -0.162, 0.972, 0.499, 0.503, 0.508, 0.490]
+# ~ ❯ ros2 run tf2_ros tf2_echo base_link vg10_grasp_center
+# At time 1764876607.67156788
+# - Translation: [0.945, -0.162, 0.972]
+# - Rotation: in Quaternion (xyzw) [0.499, 0.503, 0.508, 0.490]
+# - Rotation: in RPY (radian) [1.575, -0.014, 1.592]
+# - Rotation: in RPY (degree) [90.217, -0.781, 91.208]
+# - Matrix:
+#  -0.021  0.004  1.000  0.945
+#   1.000 -0.014  0.021 -0.162
+#   0.014  1.000 -0.004  0.972
+#   0.000  0.000  0.000  1.000
+
 
     # len 6 [x_min, x_max, y_min, y_max, z_min, z_max]
-    # End-effector position with repsect to the arm base link.
+    # End-effector position with respect to the arm base link.
     # Set z slightly higher to avoid hitting the base
     workspace_limits: [-100.0, 100.0, -100.0, 100.0, 0.10, 100.0]
-    arm_max_vel: 0.2
-    arm_max_acc: 1.0
-    platform_max_vel: 0.2
+    arm_max_vel: 0.1
+    arm_max_acc: 0.2
+    platform_max_vel: 0.1
     platform_max_acc: 0.2
     wrench_filter_factor: 0.1
     force_dead_zone_thres: 5.0

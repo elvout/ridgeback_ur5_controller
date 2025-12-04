@@ -4,7 +4,7 @@
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv);
 
-  const double frequency = 100.0;
+  const double frequency = 250.0;
 
   // Constructing the controller
   std::shared_ptr<AdmittanceController> admittance_controller =

@@ -33,19 +33,21 @@ admittance_control:
     # sub: geometry_msgs/msg/TwistStamped
     topic_ds_velocity: "~/ds_desired_velocity"
     # len 6; diagonal coefficients
-    mass_platform: [10.0, 10.0, 10.0, 5.0, 5.0, 5.0]
+    # mass_platform: [15.0, 15.0, 15.0, 5.0, 5.0, 1.0]
+    mass_platform: [2.0, 2.0, 5.0, 5.0, 5.0, 0.1]
     # len 6; diagonal coefficients
-    mass_arm: [6.0, 6.0, 6.0, 1.0, 1.0, 0.5]
+    mass_arm: [6.0, 6.0, 16.0, 0.1, 0.1, 0.1]
     # len 6; diagonal coefficients
     damping_coupling: [20.0, 20.0, 0.0, 0.0, 0.0, 10.0]
     # len 6; diagonal coefficients
-    damping_platform: [50.0, 50.0, 50.0, 0.0, 0.0, 10.0]
+    damping_platform: [20.0, 20.0, 0.0, 0.0, 0.0, 5.0]
     # len 6; diagonal coefficients
     damping_arm: [60.0, 60.0, 60.0, 15.0, 15.0, 15.0]
     # len 6; diagonal coefficients
     stiffness_coupling: [10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
     # len 7 [x, y, z, qx, qy, qz, qw]
-    equilibrium_point_spring: [0.945, -0.162, 0.972, 0.499, 0.503, 0.508, 0.490]
+    equilibrium_point_spring: [0.900, 0.000, 1.000, 0.500, 0.500, 0.500, 0.500]
+    # equilibrium_point_spring: [0.945, -0.162, 0.972, 0.499, 0.503, 0.508, 0.490]
 # ~ ❯ ros2 run tf2_ros tf2_echo base_link vg10_grasp_center
 # At time 1764876607.67156788
 # - Translation: [0.945, -0.162, 0.972]
@@ -65,17 +67,17 @@ admittance_control:
     workspace_limits: [-100.0, 100.0, -100.0, 100.0, 0.10, 100.0]
     arm_max_vel: 0.1
     arm_max_acc: 0.2
-    platform_max_vel: 0.1
-    platform_max_acc: 0.2
-    wrench_filter_factor: 0.1
+    platform_max_vel: 0.4
+    platform_max_acc: 0.4
+    wrench_filter_factor: 0.3
     force_dead_zone_thres: 5.0
     torque_dead_zone_thres: 0.5
 
 
     moveit_servo:
       ## Properties of outgoing commands
-      publish_period: 0.01  # 1/Nominal publish rate [seconds]
-      max_expected_latency: 0.1
+      publish_period: 0.004  # 1/Nominal publish rate [seconds]
+      max_expected_latency: 0.05
 
       ## MoveIt properties
       move_group_name:  ur_manipulator_with_vg10  # Often 'manipulator' or 'arm'

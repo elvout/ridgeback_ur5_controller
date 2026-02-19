@@ -110,6 +110,9 @@ class AdmittanceController : public rclcpp::Node {
   // Publisher for the twist of arm endeffector
   // rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_arm_cmd_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr pub_arm_cmd_;
+
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_arm_cart_cmd_;
+
   // Publisher for the pose of arm endeffector in the world frame
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pub_ee_pose_world_;
   // Publisher for the twist of arm endeffector in the world frame
@@ -147,6 +150,7 @@ class AdmittanceController : public rclcpp::Node {
   // equilibrium position of the coupling spring
   Vector3d equilibrium_position_;
   Vector3d equilibrium_position_seen_by_platform;
+  Eigen::Isometry3d T_baselink_endeffector_equilibrium_;
   // equilibrium orientation of the coupling spring
   Quaterniond equilibrium_orientation_;
 
@@ -179,6 +183,7 @@ class AdmittanceController : public rclcpp::Node {
   Vector6d platform_real_twist_;
 
   // Arm state: position, orientation, and twist (in "ur5_arm_base_link")
+  Eigen::Isometry3d T_baselink_endeffector_;
   Vector3d arm_real_position_;
   Quaterniond arm_real_orientation_;
   Vector6d arm_real_twist_;

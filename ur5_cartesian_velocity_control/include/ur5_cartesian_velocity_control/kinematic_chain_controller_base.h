@@ -2,10 +2,9 @@
 #define KINEMATIC_CHAIN_CONTROLLER_BASE_H
 
 #include <urdf/model.h>
-#include <controller_interface/controller.h>
+#include <controller_interface/controller_interface.hpp>
 
-#include <ros/node_handle.h>
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include <kdl/tree.hpp>
 #include <kdl/kdl.hpp>
@@ -28,10 +27,10 @@ public:
   KinematicChainControllerBase() {}
   ~KinematicChainControllerBase() {}
 
-  bool init(JI *robot, ros::NodeHandle &n);
+  bool init(JI *robot, const std::shared_ptr<rclcpp::Node> &n);
 
 protected:
-  ros::NodeHandle nh_;
+  std::shared_ptr<rclcpp::Node> nh_;
   KDL::Chain kdl_chain_;
   KDL::JntArrayVel joint_msr_;
 
@@ -46,35 +45,35 @@ protected:
 };
 
 template <typename JI>
-bool KinematicChainControllerBase<JI>::init(JI *robot, ros::NodeHandle &n)
+bool KinematicChainControllerBase<JI>::init(JI *robot, const std::shared_ptr<rclcpp::Node> &n)
 {
   nh_ = n;
 
   // get URDF and name of root and tip from the parameter server
   std::string robot_description, root_name, tip_name;
 
-  std::string name_space = nh_.getNamespace();
+  std::string name_space = nh_->get_namespace();
   std::cout<< "--------------------> name_space:  " << name_space << std::endl;
 
   if (!ros::param::search(name_space,"robot_description", robot_description))
   {
-    ROS_ERROR_STREAM("KinematicChainControllerBase: No robot description (URDF)"
-                     "found on parameter server (" << n.getNamespace() <<
+    RCLCPP_ERROR_STREAM(nh_->get_logger(), "KinematicChainControllerBase: No robot description (URDF)"
+                     "found on parameter server (" << nh_->get_namespace() <<
                      "/robot_description)");
     return false;
   }
 
   if (!nh_.getParam( name_space + "/root_name", root_name))
   {
-    ROS_ERROR_STREAM("KinematicChainControllerBase: No root name found on "
-                     "parameter server ("<<n.getNamespace()<<"/root_name)");
+    RCLCPP_ERROR_STREAM(nh_->get_logger(), "KinematicChainControllerBase: No root name found on "
+                     "parameter server ("<<nh_->get_namespace()<<"/root_name)");
     return false;
   }
 
   if (!nh_.getParam(name_space + "/tip_name", tip_name))
   {
-    ROS_ERROR_STREAM("KinematicChainControllerBase: No tip name found on "
-                     "parameter server ("<<n.getNamespace()<<"/tip_name)");
+    RCLCPP_ERROR_STREAM(nh_->get_logger(), "KinematicChainControllerBase: No tip name found on "
+                     "parameter server ("<<nh_->get_namespace()<<"/tip_name)");
     return false;
   }
 
@@ -122,17 +121,17 @@ bool KinematicChainControllerBase<JI>::init(JI *robot, ros::NodeHandle &n)
   // Populate the KDL chain
   if(!kdl_tree.getChain(root_name, tip_name, kdl_chain_))
   {
-    ROS_ERROR_STREAM("Failed to get KDL chain from tree: ");
-    ROS_ERROR_STREAM("  "<<root_name<<" --> "<<tip_name);
-    ROS_ERROR_STREAM("  Tree has "<<kdl_tree.getNrOfJoints()<<" joints");
-    ROS_ERROR_STREAM("  Tree has "<<kdl_tree.getNrOfSegments()<<" segments");
-    ROS_ERROR_STREAM("  The segments are:");
+    RCLCPP_ERROR_STREAM(nh_->get_logger(), "Failed to get KDL chain from tree: ");
+    RCLCPP_ERROR_STREAM(nh_->get_logger(), "  "<<root_name<<" --> "<<tip_name);
+    RCLCPP_ERROR_STREAM(nh_->get_logger(), "  Tree has "<<kdl_tree.getNrOfJoints()<<" joints");
+    RCLCPP_ERROR_STREAM(nh_->get_logger(), "  Tree has "<<kdl_tree.getNrOfSegments()<<" segments");
+    RCLCPP_ERROR_STREAM(nh_->get_logger(), "  The segments are:");
 
     KDL::SegmentMap segment_map = kdl_tree.getSegments();
     KDL::SegmentMap::iterator it;
 
     for( it=segment_map.begin(); it != segment_map.end(); it++ )
-      ROS_ERROR_STREAM( "    "<<(*it).first);
+      RCLCPP_ERROR_STREAM(nh_->get_logger(),  "    "<<(*it).first);
 
     return false;
   }

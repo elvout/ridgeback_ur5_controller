@@ -70,6 +70,7 @@ AdmittanceController::AdmittanceController(double frequency)
   // Publishers
   pub_platform_cmd_ = this->create_publisher<geometry_msgs::msg::Twist>(topic_platform_command, 5);
   pub_arm_cmd_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(topic_arm_command, 5);
+  pub_arm_cart_cmd_ = this->create_publisher<geometry_msgs::msg::Twist>("/fake/arm_vel", 5);
 
   pub_ee_pose_world_ =
       this->create_publisher<geometry_msgs::msg::PoseStamped>(topic_arm_pose_world, 5);
@@ -114,6 +115,9 @@ AdmittanceController::AdmittanceController(double frequency)
   // Make sure the orientation goal is normalized
   equilibrium_orientation_.coeffs()
       << equilibrium_full.bottomRows(4) / equilibrium_full.bottomRows(4).norm();
+
+  T_baselink_endeffector_equilibrium_ =
+      Eigen::Translation3d(equilibrium_position_seen_by_platform) * equilibrium_orientation_;
 
   equilibrium_new_.setZero();
 
@@ -210,6 +214,8 @@ void AdmittanceController::compute_admittance() {
   error.topRows(3) = arm_real_position_ - equilibrium_position_seen_by_platform;
   Vector6d coupling_wrench_platform = D_ * (arm_desired_twist_adm_) + K_ * error;
 
+  // TODO(elvout): Same calculation as long as equilibrium_position_ is not
+  // updated, but why the distinction once it is updated?
   error.topRows(3) = arm_real_position_ - equilibrium_position_;
   Vector6d coupling_wrench_arm = D_ * (arm_desired_twist_adm_) + K_ * error;
 
@@ -217,8 +223,12 @@ void AdmittanceController::compute_admittance() {
       M_p_.inverse() * (-D_p_ * platform_desired_twist_ +
                         rotation_base_ * kin_constraints_ * coupling_wrench_platform);
   arm_desired_accelaration =
-      M_a_.inverse() * (-coupling_wrench_arm - D_a_ * arm_desired_twist_adm_ +
+      M_a_.inverse() * (-coupling_wrench_arm * 0 - D_a_ * arm_desired_twist_adm_ +
                         admittance_ratio_ * wrench_external_ + wrench_control_);
+  // platform_desired_acceleration =
+  //     M_p_.inverse() * (-D_p_ * platform_desired_twist_ +
+  //                       rotation_base_ * kin_constraints_ *
+  //                           (admittance_ratio_ * wrench_external_ + wrench_control_));
 
   // limiting the accelaration for better stability and safety
   // x and y for  platform and x,y,z for the arm
@@ -243,7 +253,7 @@ void AdmittanceController::compute_admittance() {
   // Reassignment is necessary to cast to seconds.
   const std::chrono::duration<double> loop_cycle_period_sec = loop_rate_.period();
 
-  platform_desired_twist_ += platform_desired_acceleration * loop_cycle_period_sec.count();
+  // platform_desired_twist_ += platform_desired_acceleration * loop_cycle_period_sec.count();
   arm_desired_twist_adm_ += arm_desired_accelaration * loop_cycle_period_sec.count();
 }
 
@@ -280,6 +290,7 @@ bool AdmittanceController::update_arm_state() {
 
   const Eigen::Isometry3d& T_baselink_vg10graspcenter =
       robot_state->getGlobalLinkTransform("vg10_grasp_center");
+  T_baselink_endeffector_ = T_baselink_vg10graspcenter;
   arm_real_position_ = T_baselink_vg10graspcenter.translation();
   arm_real_orientation_ = Eigen::Quaterniond(T_baselink_vg10graspcenter.rotation());
 
@@ -457,6 +468,15 @@ void AdmittanceController::send_commands_to_robot() {
   std_msgs::msg::Float64MultiArray arm_vel_cmd =
       moveit_servo::composeMultiArrayMessage(servo_->getParams(), next_state);
   pub_arm_cmd_->publish(arm_vel_cmd);
+
+  geometry_msgs::msg::Twist arm_cart_vel;
+  arm_cart_vel.linear.x = arm_desired_twist_final_(0);
+  arm_cart_vel.linear.y = arm_desired_twist_final_(1);
+  arm_cart_vel.linear.z = arm_desired_twist_final_(2);
+  arm_cart_vel.angular.x = arm_desired_twist_final_(3);
+  arm_cart_vel.angular.y = arm_desired_twist_final_(4);
+  arm_cart_vel.angular.z = arm_desired_twist_final_(5);
+  pub_arm_cart_cmd_->publish(arm_cart_vel);
 }
 
 void AdmittanceController::limit_to_workspace() {
